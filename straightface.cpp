@@ -17,6 +17,10 @@ void OnClick(int event, int x, int y, int/*flags*/, void *userdata) {
     }
 }
 
+void skim(cv::Mat& trg, const cv::Mat& src) {
+    cv::resize(src, trg, cv::Size{}, 0.5, 0.5, cv::INTER_LINEAR);
+}
+
 int main(int argc, char **argv) {
     if (argc <= 1) {
         fprintf(stderr, R"HELP(
@@ -25,11 +29,19 @@ int main(int argc, char **argv) {
         return -1;
     }
     const char* file_name = argv[1];
-    cv::Mat src = cv::imread(file_name);
+    cv::Mat src = cv::imread(file_name);   
 
-    std::vector<cv::Mat> trg;
-    // TODO: cvtColor(image, hsv, COLOR_BGR2HSV);
-    cv::buildPyramid(src, trg, 5);  // 1/32
+    std::vector<cv::Mat> trg(6);
+#if SF_SEPARATE_CHANNELS
+    trg.at(0) = src;
+#else
+    cv::cvtColor(src, trg.at(0), cv::COLOR_BGR2HSV);
+#endif
+    skim(trg.at(1), trg.at(0));
+    skim(trg.at(2), trg.at(1));
+    skim(trg.at(3), trg.at(2));
+    skim(trg.at(4), trg.at(3));
+    skim(trg.at(5), trg.at(4));
 
     const char* win_title = "sample display";
     cv::imshow(win_title, trg.at(5));
