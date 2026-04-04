@@ -17,6 +17,18 @@ void OnClick(int event, int x, int y, int/*flags*/, void *userdata) {
     }
 }
 
+// HighGUI -- TODO: re-test on Windows
+bool isVisible(const char* win_title) {
+    try
+    {
+        return cv::getWindowProperty(win_title, 0) >=0;
+    }
+    catch(const std::exception& e)
+    {
+        return false;
+    }
+}
+
 void skim(cv::Mat& trg, const cv::Mat& src) {
     cv::resize(src, trg, cv::Size{}, 0.5, 0.5, cv::INTER_LINEAR);
 }
@@ -47,7 +59,7 @@ int main(int argc, char **argv) {
     cv::imshow(win_title, trg.at(5));
 
     cv::setMouseCallback(win_title, &OnClick);
-    while(!clicked) { (void) cv::waitKey(30); }  // millis (reciprocal of framerate)
+    while(isVisible(win_title) && !clicked) { (void) cv::waitKey(30); }  // millis (reciprocal of framerate)
 
     return 0;
 }
