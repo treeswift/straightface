@@ -8,18 +8,16 @@ namespace ui {
 
 // HighGUI -- TODO: re-test everything on Windows
 
-Frame::Frame(const std::string& title) : win_title(title) {
-    cv::setMouseCallback(win_title, &OnClick);
-}
+Frame::Frame(const std::string& title) : win_title(title) {}
 
 void Frame::display(const cv::InputArray& img) {
     cv::imshow(win_title, img);
+    cv::setMouseCallback(win_title, &OnClick, this);
 }
 
 // MOREINFO make private{}?
 void Frame::onClick(int event, int x, int y, int /*flags*/) {
-    if(event == cv::EVENT_LBUTTONDOWN || event == cv::EVENT_RBUTTONDOWN) {
-        fprintf(stdout, "Click coordinates: <%d, %d>\n", x, y);
+    if((event == cv::EVENT_LBUTTONDOWN) || (event == cv::EVENT_RBUTTONDOWN)) {
         coord_events.push_back({this, event == cv::EVENT_RBUTTONDOWN, x, y});
     }
 }
