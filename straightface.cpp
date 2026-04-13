@@ -47,8 +47,24 @@ int main(int argc, char **argv) {
 
     cv::Mat hist_hl;
     cv::calcHist(&layer, 1, hsv_components, cv::Mat(), hist_hl, histogram_dims, histogram_dim, ranges);
+    assert(hist_hl.type() == CV_32F);
     assert(hist_hl.rows == max_hue);
     assert(hist_hl.cols == max_val);
+
+    cv::Mat hist_h = cv::Mat::zeros(hist_hl.rows, 1, hist_hl.type());
+    cv::Mat hist_l = cv::Mat::zeros(1, hist_hl.cols, hist_hl.type());
+    hist_hl.forEach<float>([&](float& pixel, const int* pos) {
+        hist_h.at<float>(pos[0]) += pixel;
+        hist_l.at<float>(pos[1]) += pixel;
+    });
+    for(int i = 0; i < max_hue; ++i) {
+        fprintf(stderr, "Hue bin %03d: %2.3f\n", i, hist_h.at<float>(i));
+    }
+    for(int i = 0; i < max_val; ++i) {
+        fprintf(stderr, "Val bin %03d: %2.3f\n", i, hist_l.at<float>(i));
+    }
+    const float shrinkerance = 0.05f;
+    (void) shrinkerance;
 
     ui::Frame frame("sample display");
     frame.display(layer);
