@@ -10,10 +10,19 @@ provided_deps = [
   dependency('opencv4'),
 ]
 
+gui = static_library('cvguiwrapper',
+  [
+    'windowframe.cpp',
+  ],
+  dependencies: provided_deps)
+
 exe = executable(
   'straightface',
-  'straightface.cpp',
+  [
+    'straightface.cpp',
+  ],
   dependencies: provided_deps,
+  link_with: [gui],
   install: true,
 )
 
