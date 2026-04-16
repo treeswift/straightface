@@ -15,7 +15,7 @@ void skim(cv::Mat& trg, const cv::Mat& src) {
 }
 
 // TODO expose the remaining value of `shrink_samples`
-std::pair<int, int> shrink(const cv::Mat& hist, float shrink_samples) {
+std::pair<int, int> shrink_linear(const cv::Mat& hist, float shrink_samples) {
     int i = 0;
     int j = hist.rows * hist.cols - 1;
     while(i < j) {
@@ -81,11 +81,11 @@ int main(int argc, char **argv) {
     const float shrinkerance = 0.02f;
     int total_count = layer.rows * layer.cols; // `layer` same as in `cv::calcHist`
     const int shrink_count = shrinkerance * total_count; // floor
-    std::pair<int, int> hue_range = shrink(hist_h, shrink_count);
+    std::pair<int, int> hue_range = shrink_linear(hist_h, shrink_count);
     for(int i = hue_range.first; i < hue_range.second; ++i) {
         fprintf(stderr, "Hue bin %03d: %2.3f\n", i, hist_h.at<float>(i));
     }
-    std::pair<int, int> val_range = shrink(hist_l, shrink_count);
+    std::pair<int, int> val_range = shrink_linear(hist_l, shrink_count);
     for(int i = val_range.first; i < val_range.second; ++i) {
         fprintf(stderr, "Val bin %03d: %2.3f\n", i, hist_l.at<float>(i));
     }
