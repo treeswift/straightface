@@ -12,19 +12,26 @@ Frame::Frame(const std::string& title) : win_title(title) {}
 
 void Frame::display(const cv::InputArray& img) {
     cv::imshow(win_title, img);
-    cv::setMouseCallback(win_title, &OnClick, this);
+    alive = true;
+    cv::setMouseCallback(win_title, &OnMouseEvent, this);
 }
 
 // MOREINFO make private{}?
-void Frame::onClick(int event, int x, int y, int /*flags*/) {
+void Frame::onMouseEvent(int event, int x, int y, int flags) {
+    if(event == cv::EVENT_MOUSEWHEEL) {
+        on_wheel(cv::getMouseWheelDelta(flags));
+    }
+    if((event == cv::EVENT_LBUTTONUP) || (event == cv::EVENT_RBUTTONUP)) {
+        alive &= !on_click(event == cv::EVENT_RBUTTONUP, x, y);
+    }
     if((event == cv::EVENT_LBUTTONDOWN) || (event == cv::EVENT_RBUTTONDOWN)) {
-        coord_events.push_back({this, event == cv::EVENT_RBUTTONDOWN, x, y});
+        alive &= !on_click(event == cv::EVENT_RBUTTONDOWN, x, y);
     }
 }
 
 // MOREINFO make namespace{}?
-void Frame::OnClick(int event, int x, int y, int flags, void *frame) {
-    static_cast<Frame*>(frame)->onClick(event, x, y, flags);
+void Frame::OnMouseEvent(int event, int x, int y, int flags, void *frame) {
+    static_cast<Frame*>(frame)->onMouseEvent(event, x, y, flags);
 }
 
 bool Frame::isVisible() const {
@@ -38,12 +45,12 @@ bool Frame::isVisible() const {
     }
 }
 
-void Frame::waitSingle(int frame_period) {
-    while(isVisible() && coordInputPending() && keybdInputPending()) {
+void Frame::loop(int frame_period) {
+    while(alive && isVisible()) {
         // poll_kbd_events(frame_period);
         const int key_code = cv::waitKey(frame_period);
         if(key_code >= 0) {
-            key_codes.push_back(key_code);
+            alive &= !on_key(key_code);
         }
     }
 }

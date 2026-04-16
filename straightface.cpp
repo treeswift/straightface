@@ -34,6 +34,19 @@ std::pair<int, int> shrink_linear(const cv::Mat& hist, float shrink_samples) {
     return {i, j};
 }
 
+template<typename Pixel>
+void dump_range(cv::Mat mat, int i, int j) {
+    for(; i < j; ++i) {
+        fprintf(stderr, "Bin %03d: %2.3f\n", i, mat.at<Pixel>(i));
+    }
+
+}
+
+template<typename Pixel>
+void dump_range(cv::Mat mat, const std::pair<int, int> &range) {
+    dump_range<Pixel>(mat, range.first, range.second);
+}
+
 int main(int argc, char **argv) {
     if (argc <= 1) {
         fprintf(stderr, R"HELP(
@@ -45,6 +58,7 @@ int main(int argc, char **argv) {
     cv::Mat src = cv::imread(file_name);   
 
     const int thumb_layer = 5;  // -> config
+    const int lines_layer = 3;  // -> config
     std::vector<cv::Mat> trg(thumb_layer + 1);
 #if SF_SEPARATE_CHANNELS
     trg.at(0) = src;
@@ -64,10 +78,10 @@ int main(int argc, char **argv) {
     const float* ranges[] = {color_range, light_range};
     const int hsv_components[] = {0, 2};
 
-    auto& layer = trg.at(thumb_layer);
+    auto& thumb = trg.at(thumb_layer);
 
     cv::Mat hist_hl;
-    cv::calcHist(&layer, 1, hsv_components, cv::Mat(), hist_hl, histogram_dims, histogram_dim, ranges);
+    cv::calcHist(&thumb, 1, hsv_components, cv::Mat(), hist_hl, histogram_dims, histogram_dim, ranges);
     assert(hist_hl.type() == CV_32F);
     assert(hist_hl.rows == max_hue);
     assert(hist_hl.cols == max_val);
@@ -78,21 +92,22 @@ int main(int argc, char **argv) {
         hist_h.at<float>(pos[0]) += pixel;
         hist_l.at<float>(pos[1]) += pixel;
     });
-    const float shrinkerance = 0.02f;
-    int total_count = layer.rows * layer.cols; // `layer` same as in `cv::calcHist`
-    const int shrink_count = shrinkerance * total_count; // floor
-    std::pair<int, int> hue_range = shrink_linear(hist_h, shrink_count);
-    for(int i = hue_range.first; i < hue_range.second; ++i) {
-        fprintf(stderr, "Hue bin %03d: %2.3f\n", i, hist_h.at<float>(i));
-    }
-    std::pair<int, int> val_range = shrink_linear(hist_l, shrink_count);
-    for(int i = val_range.first; i < val_range.second; ++i) {
-        fprintf(stderr, "Val bin %03d: %2.3f\n", i, hist_l.at<float>(i));
-    }
 
+    // adjust brightness (we need a better approach for hues)
+    const float shrinkerance = 0.02f;
+    int total_count = thumb.rows * thumb.cols; // `thumb` same as in `cv::calcHist`
+    const int shrink_count = shrinkerance * total_count; // floor
+    // std::pair<int, int> hue_range = shrink_linear(hist_h, shrink_count);
+    // dump_range<float>(hist_h, hue_range);
+    std::pair<int, int> val_range = shrink_linear(hist_l, shrink_count);
+    // dump_range<float>(hist_l, val_range);
+    (void) val_range;  // note that we want a minimum lightness/saturation to keep hue differences visible
+    //
+
+    const auto& lines = trg.at(lines_layer);
     ui::Frame frame("sample display");
-    frame.display(layer);
-    frame.waitSingle();
+    frame.display(lines); // thumb
+    frame.loop();
 
     return 0;
 }
