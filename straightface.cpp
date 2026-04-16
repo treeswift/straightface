@@ -105,8 +105,9 @@ int main(int argc, char **argv) {
     //
 
     const auto& lines = trg.at(lines_layer);
-    ui::Frame frame("sample display");
-    frame.display(lines); // thumb
+    ui::Frame frame("original image display");
+    frame.display(lines); // intermediate LoD
+    frame.addKnob("greed", [](int val){ fprintf(stderr, "val=%d\n", val); }, 60);  // TODO add callback
     frame.loop();
 
     return 0;
