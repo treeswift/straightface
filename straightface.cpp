@@ -5,12 +5,33 @@
 
 #include <stdio.h>  // I prefer fprintf to stream "<<" syntax
 
+#include <utility>
 #include <vector>
 
 // struct AppModel{}
 
 void skim(cv::Mat& trg, const cv::Mat& src) {
     cv::resize(src, trg, cv::Size{}, 0.5, 0.5, cv::INTER_LINEAR);
+}
+
+// TODO expose the remaining value of `shrink_samples`
+std::pair<int, int> shrink(const cv::Mat& hist, float shrink_samples) {
+    int i = 0;
+    int j = hist.rows * hist.cols - 1;
+    while(i < j) {
+        float l = hist.at<float>(i);
+        float r = hist.at<float>(j);
+        if(l < r && l <= shrink_samples) {
+            shrink_samples -= l;
+            ++i;
+        } else if(r <= shrink_samples) { // slightly favor contraction from the right
+            shrink_samples -= r;
+            --j;
+        } else {
+            break;
+        }
+    }
+    return {i, j};
 }
 
 int main(int argc, char **argv) {
@@ -57,14 +78,17 @@ int main(int argc, char **argv) {
         hist_h.at<float>(pos[0]) += pixel;
         hist_l.at<float>(pos[1]) += pixel;
     });
-    for(int i = 0; i < max_hue; ++i) {
+    const float shrinkerance = 0.02f;
+    int total_count = layer.rows * layer.cols; // `layer` same as in `cv::calcHist`
+    const int shrink_count = shrinkerance * total_count; // floor
+    std::pair<int, int> hue_range = shrink(hist_h, shrink_count);
+    for(int i = hue_range.first; i < hue_range.second; ++i) {
         fprintf(stderr, "Hue bin %03d: %2.3f\n", i, hist_h.at<float>(i));
     }
-    for(int i = 0; i < max_val; ++i) {
+    std::pair<int, int> val_range = shrink(hist_l, shrink_count);
+    for(int i = val_range.first; i < val_range.second; ++i) {
         fprintf(stderr, "Val bin %03d: %2.3f\n", i, hist_l.at<float>(i));
     }
-    const float shrinkerance = 0.05f;
-    (void) shrinkerance;
 
     ui::Frame frame("sample display");
     frame.display(layer);
