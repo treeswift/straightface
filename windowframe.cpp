@@ -39,7 +39,7 @@ void Frame::onMouseEvent(int event, int x, int y, int flags) {
         on_wheel(cv::getMouseWheelDelta(flags));
     }
     if((event == cv::EVENT_LBUTTONUP) || (event == cv::EVENT_RBUTTONUP)) {
-        alive &= !on_click(event == cv::EVENT_RBUTTONUP, x, y);
+        alive &= !on_btnup(event == cv::EVENT_RBUTTONUP, x, y);
     }
     if((event == cv::EVENT_LBUTTONDOWN) || (event == cv::EVENT_RBUTTONDOWN)) {
         alive &= !on_click(event == cv::EVENT_RBUTTONDOWN, x, y);
