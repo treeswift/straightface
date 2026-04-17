@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
             return (imin <= imax) ? (imax - imin + 1) : 0;
         };
 
-        double edge = elen(0) + elen(1) + elen(2) + elen(3);
+        double edge = elen(0) + elen(1) + elen(2) + elen(3); // MOREINFO iterate along the actual perimeter, wrapping at fractions?
         return 0. - area * edge;
     };
 
@@ -209,14 +209,36 @@ int main(int argc, char **argv) {
             lines = trg.at(lines_layer).clone();  // re-obtain the lines layer
         } else {
             anchor = {x, y};
-            float tolerance = expf(0.1 * greed);  // MOREINFO consider int16 or fp32 pyramid?
+            float tolerance = expf(0.1 * greed);  // MOREINFO consider int16 or fp32 pyramid? looks ok for now...
             // fprintf(stderr, "%d, %d tolerance=%f\n", x, y, tolerance);
             cv::Scalar tol3 = {tolerance, tolerance, tolerance};
             cv::floodFill(lines, anchor, fillco, nullptr, tol3, tol3, 0 * cv::FLOODFILL_FIXED_RANGE);
             // TODO use overload to update selection mask; suggest a contrasting color/choose from a palette
             
             // beginning with the seed point, write the solver:
-            ;;
+            cv::Ptr<LambdaFunction> lf = new LambdaFunction(8, fitness); // barbarity
+            cv::Mat anchvec = cv::Mat1d(1, 2);
+            anchvec.at<double>(0) = anchor.x;
+            anchvec.at<double>(1) = anchor.y;
+            cv::Mat initvec = cv::repeat(anchvec, 1, 4);
+            cv::Mat stepvec = initvec.clone();
+            stepvec.at<double>(0) = stepvec.at<double>(1) =
+            stepvec.at<double>(2) = stepvec.at<double>(5) = -1.;
+            stepvec.at<double>(3) = stepvec.at<double>(4) =
+            stepvec.at<double>(6) = stepvec.at<double>(7) = +1.;
+            auto solver = cv::DownhillSolver::create(lf, stepvec);
+            solver->minimize(initvec);
+            cv::Point2i v0 = {initvec.at<double>(0), initvec.at<double>(1)};
+            cv::Point2i v1 = {initvec.at<double>(2), initvec.at<double>(3)};
+            cv::Point2i v2 = {initvec.at<double>(4), initvec.at<double>(5)};
+            cv::Point2i v3 = {initvec.at<double>(6), initvec.at<double>(7)};
+            cv::line(lines, v0, v1, lineco);
+            cv::line(lines, v2, v1, lineco);
+            cv::line(lines, v2, v3, lineco);
+            cv::line(lines, v0, v3, lineco);
+            for(int i = 0; i < 8; i += 2) {
+                fprintf(stderr, "vertex: %lf, %lf\n", initvec.at<double>(i), initvec.at<double>(i + 1));
+            }
         }
         frame.display(lines); // refresh
         return false;
