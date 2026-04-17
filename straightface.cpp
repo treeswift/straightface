@@ -143,6 +143,7 @@ int main(int argc, char **argv) {
         for(int i = 0; i < 4; ++i) {
             const cv::Point2d vert = tetrapod[i];
             if(vert.x < 0. || vert.y < 0. || vert.x >= lines.cols || vert.y >= lines.rows) {
+                fprintf(stderr, "UNFIT: Boundaries\n");
                 return 0.;
             }
         }
@@ -161,6 +162,11 @@ int main(int argc, char **argv) {
         bool a2 = std::signbit(rot_p(s2, s3));
         bool a3 = std::signbit(rot_p(s3, s0));
         if((a0 != a1) || (a2 != a3) || (a0 != a2)) {
+            fprintf(stderr, "p0.x,y=%lf, %lf, a=%d\n", tetrapod[0].x, tetrapod[0].y, (int) a0);
+            fprintf(stderr, "p1.x,y=%lf, %lf, a=%d\n", tetrapod[1].x, tetrapod[1].y, (int) a1);
+            fprintf(stderr, "p2.x,y=%lf, %lf, a=%d\n", tetrapod[2].x, tetrapod[2].y, (int) a2);
+            fprintf(stderr, "p3.x,y=%lf, %lf, a=%d\n", tetrapod[3].x, tetrapod[3].y, (int) a3);
+            fprintf(stderr, "UNFIT: Not convex\n");
             return 0.; // the quadrangle is self-intersecting or concave
         }
 
@@ -180,6 +186,7 @@ int main(int argc, char **argv) {
 
             double elen = sqrt(v1.x * v1.x + v1.y * v1.y);
             if(elen < 1.) {
+                fprintf(stderr, "SINGLE PIXEL\n");
                 return (int) isat(v0);
             }
             cv::Point2d step = side / elen;
@@ -197,6 +204,7 @@ int main(int argc, char **argv) {
         };
 
         double edge = elen(0) + elen(1) + elen(2) + elen(3); // MOREINFO iterate along the actual perimeter, wrapping at fractions?
+        fprintf(stderr, "RETURN: area=%lf * edge=%lf\n");
         return 0. - area * edge;
     };
 
@@ -223,9 +231,9 @@ int main(int argc, char **argv) {
             cv::Mat initvec = cv::repeat(anchvec, 1, 4);
             cv::Mat stepvec = initvec.clone();
             stepvec.at<double>(0) = stepvec.at<double>(1) =
-            stepvec.at<double>(2) = stepvec.at<double>(5) = -1.;
+            stepvec.at<double>(2) = stepvec.at<double>(7) = -1.;
             stepvec.at<double>(3) = stepvec.at<double>(4) =
-            stepvec.at<double>(6) = stepvec.at<double>(7) = +1.;
+            stepvec.at<double>(5) = stepvec.at<double>(6) = +1.;
             auto solver = cv::DownhillSolver::create(lf, stepvec);
             solver->minimize(initvec);
             cv::Point2i v0 = {initvec.at<double>(0), initvec.at<double>(1)};
