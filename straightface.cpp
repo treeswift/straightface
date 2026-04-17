@@ -235,6 +235,8 @@ int main(int argc, char **argv) {
             stepvec.at<double>(3) = stepvec.at<double>(4) =
             stepvec.at<double>(5) = stepvec.at<double>(6) = +1.;
             auto solver = cv::DownhillSolver::create(lf, stepvec);
+            cv::add(initvec, stepvec, initvec);
+            cv::add(initvec, stepvec, initvec);
             solver->minimize(initvec);
             cv::Point2i v0 = {initvec.at<double>(0), initvec.at<double>(1)};
             cv::Point2i v1 = {initvec.at<double>(2), initvec.at<double>(3)};
