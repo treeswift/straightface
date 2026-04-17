@@ -12,8 +12,8 @@
 
 // extract to: geometry.h
 inline cv::Point2d rot90(const cv::Point2d& vec) { return {vec.y, -vec.x}; }
-double dot_p(const cv::Point2d& v1, const cv::Point2d& v2) { return v1.x * v2.x + v1.y * v2.x; }
-double rot_p(const cv::Point2d& v1, const cv::Point2d& v2) { return dot_p(v1, rot90(v2)); }
+double dot_p(const cv::Point2d& v1, const cv::Point2d& v2) { return v1.x * v2.x + v1.y * v2.y; }
+double rot_p(const cv::Point2d& v1, const cv::Point2d& v2) { return dot_p(rot90(v1), v2); }
 
 // struct AppModel{}
 
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
     cv::Point2i anchor = {-1, -1};
 
     cv::Scalar fillco = {150, 0, 255};
-    cv::Scalar lineco = {30, 128, 255};
+    cv::Scalar lineco = {60, 128, 255};
 
     auto lines = trg.at(lines_layer).clone();
 
@@ -149,23 +149,23 @@ int main(int argc, char **argv) {
         }
 
         // testing for convexity (TODO merge s0..s3 calculation with previous):
-        cv::Point2d s0 = tetrapod[0] - tetrapod[1];
-        cv::Point2d s1 = tetrapod[1] - tetrapod[2];
-        cv::Point2d s2 = tetrapod[2] - tetrapod[3];
-        cv::Point2d s3 = tetrapod[3] - tetrapod[0];
+        cv::Point2d s0 = tetrapod[1] - tetrapod[0];
+        cv::Point2d s1 = tetrapod[2] - tetrapod[1];
+        cv::Point2d s2 = tetrapod[3] - tetrapod[2];
+        cv::Point2d s3 = tetrapod[0] - tetrapod[3];
 
         // we want all the angles to have the same CW/CCW direction,
         // i.e. all the side "rot products" at the angles to have the same sign
         // (the sign inversion due to direction inversion is factored out by the comparison)
-        bool a0 = std::signbit(rot_p(s0, s1));
-        bool a1 = std::signbit(rot_p(s1, s2));
-        bool a2 = std::signbit(rot_p(s2, s3));
-        bool a3 = std::signbit(rot_p(s3, s0));
+        bool a0 = std::signbit(rot_p(s3, s0));
+        bool a1 = std::signbit(rot_p(s0, s1));
+        bool a2 = std::signbit(rot_p(s1, s2));
+        bool a3 = std::signbit(rot_p(s2, s3));
         if((a0 != a1) || (a2 != a3) || (a0 != a2)) {
-            fprintf(stderr, "p0.x,y=%lf, %lf, a=%d\n", tetrapod[0].x, tetrapod[0].y, (int) a0);
-            fprintf(stderr, "p1.x,y=%lf, %lf, a=%d\n", tetrapod[1].x, tetrapod[1].y, (int) a1);
-            fprintf(stderr, "p2.x,y=%lf, %lf, a=%d\n", tetrapod[2].x, tetrapod[2].y, (int) a2);
-            fprintf(stderr, "p3.x,y=%lf, %lf, a=%d\n", tetrapod[3].x, tetrapod[3].y, (int) a3);
+            fprintf(stderr, "p0.x,y=%lf, %lf, s.x,y=%lf, %lf, a=%d\n", tetrapod[0].x, tetrapod[0].y, s0.x, s0.y, (int) a0);
+            fprintf(stderr, "p1.x,y=%lf, %lf, s.x,y=%lf, %lf, a=%d\n", tetrapod[1].x, tetrapod[1].y, s1.x, s1.y, (int) a1);
+            fprintf(stderr, "p2.x,y=%lf, %lf, s.x,y=%lf, %lf, a=%d\n", tetrapod[2].x, tetrapod[2].y, s2.x, s2.y, (int) a2);
+            fprintf(stderr, "p3.x,y=%lf, %lf, s.x,y=%lf, %lf, a=%d\n", tetrapod[3].x, tetrapod[3].y, s3.x, s3.y, (int) a3);
             fprintf(stderr, "UNFIT: Not convex\n");
             return 0.; // the quadrangle is self-intersecting or concave
         }
@@ -178,13 +178,20 @@ int main(int argc, char **argv) {
         // then, inlining:
         double area = abs(rot_p(d0, d1));
 
-        auto isat = [&](const cv::Point2d& pt) { return lines.at<cv::Scalar>((int) pt.x, (int) pt.y) == fillco; };
+        auto isat = [&](const cv::Point2d& pt) {
+            cv::Scalar px = lines.at<cv::Vec3b>((int) pt.y, (int) pt.x);
+            // fprintf(stderr, "%lf, %lf, %lf, %lf ?= %lf, %lf, %lf, %lf\n",
+            //     px.val[0], px.val[1], px.val[2], px.val[3],
+            //     fillco.val[0], fillco.val[1], fillco.val[2], fillco.val[3]
+            // );
+            return px == fillco; // FIXME rather, have fillco as Vec3b
+        };
         auto elen = [&](int side_index) {
             const cv::Point2d& v0 = tetrapod[side_index];
             const cv::Point2d& v1 = tetrapod[(side_index + 1) % 4];
-            const cv::Point2d side = v1 - v0; // TOOD edges[side_index] // TODO rename sides into edges
+            const cv::Point2d side = v1 - v0;
 
-            double elen = sqrt(v1.x * v1.x + v1.y * v1.y);
+            double elen = sqrt(side.x * side.x + side.y * side.y); // extract norm(vec)
             if(elen < 1.) {
                 fprintf(stderr, "SINGLE PIXEL\n");
                 return (int) isat(v0);
@@ -194,18 +201,21 @@ int main(int argc, char **argv) {
             int imin = std::numeric_limits<int>::max();
             int imax = 0;
             for(int i = 0; i < ilen; ++i) {
-                bool atis = isat(v0 + step * i); // TODO change to search from both ends, slightly more optimal
+                auto p = v0 + step * i;
+                // fprintf(stderr, "point at: %lf,%lf eq \n", p.x, p.y);
+                bool atis = isat(p); // TODO change to search from both ends, slightly more optimal
                 if(atis) {
                     imin = std::min(imin, i);
                     imax = std::max(imax, i);
+                    // fprintf(stderr, "point at: %lf,%lf painted i=%d imin=%d imax=%d\n", p.x, p.y, i, imin, imax);
                 }
             }
             return (imin <= imax) ? (imax - imin + 1) : 0;
         };
 
         double edge = elen(0) + elen(1) + elen(2) + elen(3); // MOREINFO iterate along the actual perimeter, wrapping at fractions?
-        fprintf(stderr, "RETURN: area=%lf * edge=%lf\n");
-        return 0. - area * edge;
+        fprintf(stderr, "RETURN: area=%lf * edge=%lf\n", area, edge);
+        return 0. - sqrt(area) * edge;
     };
 
     frame.display(lines); // intermediate LoD
@@ -238,14 +248,14 @@ int main(int argc, char **argv) {
             cv::add(initvec, stepvec, initvec);
             cv::add(initvec, stepvec, initvec);
             solver->minimize(initvec);
-            cv::Point2i v0 = {initvec.at<double>(0), initvec.at<double>(1)};
-            cv::Point2i v1 = {initvec.at<double>(2), initvec.at<double>(3)};
-            cv::Point2i v2 = {initvec.at<double>(4), initvec.at<double>(5)};
-            cv::Point2i v3 = {initvec.at<double>(6), initvec.at<double>(7)};
-            cv::line(lines, v0, v1, lineco);
-            cv::line(lines, v2, v1, lineco);
-            cv::line(lines, v2, v3, lineco);
-            cv::line(lines, v0, v3, lineco);
+            // cv::Point2i v0 = {initvec.at<double>(0), initvec.at<double>(1)};
+            // cv::Point2i v1 = {initvec.at<double>(2), initvec.at<double>(3)};
+            // cv::Point2i v2 = {initvec.at<double>(4), initvec.at<double>(5)};
+            // cv::Point2i v3 = {initvec.at<double>(6), initvec.at<double>(7)};
+            // cv::line(lines, v0, v1, lineco);
+            // cv::line(lines, v2, v1, lineco);
+            // cv::line(lines, v2, v3, lineco);
+            // cv::line(lines, v0, v3, lineco);
             for(int i = 0; i < 8; i += 2) {
                 fprintf(stderr, "vertex: %lf, %lf\n", initvec.at<double>(i), initvec.at<double>(i + 1));
             }
