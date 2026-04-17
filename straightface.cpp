@@ -80,6 +80,7 @@ int main(int argc, char **argv) {
 
     auto& thumb = trg.at(thumb_layer);
 
+#if SF_COMPUTE_HISTOGRAM
     cv::Mat hist_hl;
     cv::calcHist(&thumb, 1, hsv_components, cv::Mat(), hist_hl, histogram_dims, histogram_dim, ranges);
     assert(hist_hl.type() == CV_32F);
@@ -93,6 +94,7 @@ int main(int argc, char **argv) {
         hist_l.at<float>(pos[1]) += pixel;
     });
 
+#if SF_ANALYZE_HISTOGRAM
     // adjust brightness (we need a better approach for hues)
     const float shrinkerance = 0.02f;
     int total_count = thumb.rows * thumb.cols; // `thumb` same as in `cv::calcHist`
@@ -102,6 +104,8 @@ int main(int argc, char **argv) {
     std::pair<int, int> val_range = shrink_linear(hist_l, shrink_count);
     // dump_range<float>(hist_l, val_range);
     (void) val_range;  // note that we want a minimum lightness/saturation to keep hue differences visible
+#endif // SF_ANALYZE_HISTOGRAM
+#endif // SF_COMPUTE_HISTOGRAM
 
     ui::Frame frame("original image display");
     // here comes the model
