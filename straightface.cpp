@@ -69,6 +69,9 @@ int main(int argc, char **argv) {
         skim(trg.at(layer_id), trg.at(layer_id-1));
     }
 
+    auto& thumb = trg.at(thumb_layer);
+
+#if SF_COMPUTE_HISTOGRAM
     const int max_hue = 180;
     const int max_val = 256;
     const int histogram_dims = 2;
@@ -78,9 +81,6 @@ int main(int argc, char **argv) {
     const float* ranges[] = {color_range, light_range};
     const int hsv_components[] = {0, 2};
 
-    auto& thumb = trg.at(thumb_layer);
-
-#if SF_COMPUTE_HISTOGRAM
     cv::Mat hist_hl;
     cv::calcHist(&thumb, 1, hsv_components, cv::Mat(), hist_hl, histogram_dims, histogram_dim, ranges);
     assert(hist_hl.type() == CV_32F);
