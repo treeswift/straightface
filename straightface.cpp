@@ -102,12 +102,30 @@ int main(int argc, char **argv) {
     std::pair<int, int> val_range = shrink_linear(hist_l, shrink_count);
     // dump_range<float>(hist_l, val_range);
     (void) val_range;  // note that we want a minimum lightness/saturation to keep hue differences visible
-    //
 
-    const auto& lines = trg.at(lines_layer);
     ui::Frame frame("original image display");
+    // here comes the model
+    cv::Point2i anchor = {-1, -1};
+
+    auto lines = trg.at(lines_layer).clone();
     frame.display(lines); // intermediate LoD
-    frame.addKnob("greed", [](int val){ fprintf(stderr, "val=%d\n", val); }, 60);  // TODO add callback
+    int greed = frame.addKnob("greed", [&](int val){
+        greed = val;
+    }, 30);
+    frame.on_click = [&](bool right, int x, int y) {
+        if(right) {
+            lines = trg.at(lines_layer).clone();  // re-obtain the lines layer
+        } else {
+            anchor = {x, y};
+            float tolerance = expf(0.1 * greed);  // MOREINFO consider int16 or fp32 pyramid?
+            // fprintf(stderr, "%d, %d tolerance=%f\n", x, y, tolerance);
+            cv::Scalar tol3 = {tolerance, tolerance, tolerance};
+            cv::floodFill(lines, anchor, {150, 0, 255}, nullptr, tol3, tol3, 0 * cv::FLOODFILL_FIXED_RANGE);
+            // TODO use overload to update selection mask; suggest a contrasting color/choose from a palette
+        }
+        frame.display(lines); // refresh
+        return false;
+    };
     frame.loop();
 
     return 0;

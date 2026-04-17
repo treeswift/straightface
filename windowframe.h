@@ -25,7 +25,7 @@ struct Frame{
 
     Frame(const std::string& title);
     void display(const cv::InputArray& img);
-    void addKnob(const std::string& in_var, std::function<void(int)> on, int max, int def = std::numeric_limits<int>::min());
+    int addKnob(const std::string& in_var, std::function<void(int)> on, int max, int def = std::numeric_limits<int>::min());
 
     void onMouseEvent(int event, int x, int y, int /*flags*/);
     static void OnMouseEvent(int event, int x, int y, int flags, void *frame);

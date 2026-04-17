@@ -16,7 +16,7 @@ void Frame::display(const cv::InputArray& img) {
     cv::setMouseCallback(win_title, &OnMouseEvent, this);
 }
 
-void Frame::addKnob(const std::string& in_var, std::function<void(int)> on, int max, int def) {
+int Frame::addKnob(const std::string& in_var, std::function<void(int)> on, int max, int def) {
     if(std::numeric_limits<int>::min() == def) {
         def = max / 2;
     }
@@ -25,6 +25,7 @@ void Frame::addKnob(const std::string& in_var, std::function<void(int)> on, int 
         auto & param = bookmark.first->second;
         cv::createTrackbar(in_var, win_title, &param.value, param.max_v, &OnSliderEvent, &*bookmark.first);
     }
+    return def;
 }
 
 void Frame::OnSliderEvent(int pos, void* param) {
