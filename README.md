@@ -8,7 +8,7 @@ The goal is to produce simgle-image-per-page output `ocrmypdf` can readily pick 
 We are aware of `unpaper` and `page-dewarp` but haven't integrated them in our pipeline meaningfully yet.
 
 ## State
-This is a very early draft but I am under noticeable pressure to make it at least somewhat working in the next few days. Stay tuned.
+This is a very early draft but I am under noticeable pressure to make it at least somewhat working in the next few weeks. Stay tuned.
 
 ## License
 Both copyright and copyleft suck. We don't create algorithms. We discover them. No one should appropriate pure mathematics.
